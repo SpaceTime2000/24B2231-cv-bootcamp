@@ -1,6 +1,7 @@
 # Inter-IIT CV Bootcamp - learning from noisy labels (CIFAR-10N)
 
-Roll no: 24B2231. All code is in this folder (`code/` in the submission zip).
+Roll no: 24B2231. This folder (`code/`) holds all code; the repo root also has `predictions/`, `results.json`
+and `report.md`.
 
 ## Setup
 ```
@@ -27,7 +28,7 @@ task2_dynamics.py      per-epoch curves, early-stop epoch + predictions (reads T
 task3_scores.py        5-fold out-of-fold noise scores            task3_evaluate.py  AUROC / precision@k check
 task4_robust.py        coteach / filter / relabel / gce / sce / ls
 task5_synthetic.py     CE + best Task 4 method on synthetic noise
-tools/                 make_dummy_data.py, smoke_test.sh (pipeline test on fake data, CPU)
+fill_results.py        fills results.json and an evidence digest from the saved runs
 ```
 
 ## Reproduce (run from this folder; every command resumes if interrupted)
@@ -38,12 +39,19 @@ python task3_scores.py    --data-dir data --out-dir outputs
 python task3_evaluate.py  --data-dir data --out-dir outputs
 python task4_robust.py    --data-dir data --out-dir outputs --methods coteach filter gce
 python task5_synthetic.py --data-dir data --out-dir outputs
-python fill_results.py   --data-dir data --out-dir outputs --gpu "<gpu name>" --memorization-epoch 40 --overwrite
+python fill_results.py    --data-dir data --out-dir outputs --gpu "<gpu name>" --memorization-epoch 40 --overwrite
 ```
-`fill_results.py` fills results.json from the saved runs. report.md was written by hand from reports/report_evidence.md.
-Outputs: `outputs/predictions/*.csv` (the graded files), `outputs/reports/*` (stats, curves, summaries),
-`outputs/runs/*` (logs, per-epoch logits, final weights). If Task 5's best method is `filter`/`relabel`, first run
-`python task3_scores.py --label-set synthetic ...`.
+Outputs: `outputs/predictions/*.csv` (the graded files, copied to `predictions/` in the submission),
+`outputs/reports/*` (stats, curves, summaries), `outputs/runs/*` (logs, per-epoch logits, final weights).
+`report.md` was written by hand from `outputs/reports/report_evidence.md`.
+
+## What was run
+- **Task 3:** 5-fold out-of-fold scoring (30 epochs per fold). The submitted score is `nll_mean`, the mean over
+  epochs of the held-out negative log-likelihood of the given label (the script's default signal).
+- **Task 4:** co-teaching (two networks, forget rate 0.4 taken from the ~40% noise stated in the problem),
+  filtering (drops the high-score component of a per-class 2-component Gaussian mixture on the Task 3 scores,
+  then retrains with CE) and GCE. Best on noisy validation accuracy: co-teaching.
+- **Task 5:** CE and co-teaching retrained on `synthetic_label`, with the same recipe and settings.
 
 ## Fixed recipe (identical for every run)
 SGD (momentum 0.9, nesterov), peak lr 0.1, wd 5e-4, batch 128, 2-epoch warmup + cosine, 60 epochs, random crop
